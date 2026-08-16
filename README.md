@@ -1,107 +1,84 @@
 # Z.ai Code Review
 
-AI-powered GitHub Pull Request code review using Z.ai models. Automatic PR comments, bug detection, and improvement suggestions via GitHub Actions.
+Run a GLM code review on each GitHub pull request. The action sends the GitHub patch to the Z.ai Coding Plan endpoint. It then creates or updates one pull request comment.
 
-## Features
+## Use the action
 
-- 🚀 Detect bugs
-- 🔍 Suggest improvements
-- 🧠 AI-driven PR feedback
-- ⚡ Works with GitHub Actions
-
-## Quickstart
-
-Add this to your `.github/workflows/code-review.yml`:
+After the maintainer publishes a release, replace `<release-tag>` with its tag.
 
 ```yaml
-name: AI Code Review with Z.ai
+name: GLM code review
 
 on:
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, reopened, synchronize]
 
 permissions:
+  contents: read
   pull-requests: write
 
 jobs:
   review:
-    name: Review
     runs-on: ubuntu-latest
     steps:
-      - name: Code Review
-        uses: tarmojussila/zai-code-review@v0.4.0
+      - name: Review the pull request
+        uses: tarmojussila/zai-code-review@<release-tag>
         with:
           ZAI_API_KEY: ${{ secrets.ZAI_API_KEY }}
 ```
+
+The action uses `glm-5.3` by default. It calls the Z.ai Coding Plan OpenAI Chat Completions endpoint.
 
 ## Inputs
 
 | Input | Required | Default | Description |
-|---|---|---|---|
-| `ZAI_API_KEY` | Yes | — | Your Z.ai API key |
-| `ZAI_MODEL` | No | `glm-5.3` | Z.ai coding-plan model (`glm-5.3`, `glm-5-turbo`, or `glm-4.7`) |
-| `ZAI_SYSTEM_PROMPT` | No | See below | Custom system prompt for the AI reviewer |
-| `ZAI_REVIEWER_NAME` | No | `Z.ai Code Review` | Name shown in the review comment header |
-| `EXCLUDE_PATTERNS` | No | `*.lock,package-lock.json,yarn.lock,pnpm-lock.yaml` | Comma-separated file patterns to exclude from review |
-| `MAX_DIFF_CHARS` | No | `0` (unlimited) | Maximum total characters for the diff sent to the API |
+| --- | --- | --- | --- |
+| `ZAI_API_KEY` | Yes | — | Z.ai API key. Store it as a GitHub Actions secret. |
+| `ZAI_MODEL` | No | `glm-5.3` | GLM model for the review. |
+| `ZAI_SYSTEM_PROMPT` | No | See `action.yml` | Review instruction for the model. |
+| `ZAI_REVIEWER_NAME` | No | `Z.ai Code Review` | Heading for the pull request comment. |
+| `ZAI_REASONING_EFFORT` | No | `high` | `low`, `medium`, `high`, or `max` for GLM-5.2 and newer. |
+| `EXCLUDE_PATTERNS` | No | Lock file patterns | Comma-separated file patterns to exclude. |
+| `MAX_DIFF_CHARS` | No | `120000` | Maximum diff characters sent to Z.ai. Set `0` for no limit. |
+| `MAX_OUTPUT_TOKENS` | No | `4096` | Maximum tokens in the review response. |
+| `GITHUB_TOKEN` | No | `${{ github.token }}` | Token used to read the pull request and write its comment. |
 
-The default system prompt is:
+The action sends `reasoning_effort` only for GLM-5.2 and newer. It does not send that field for older GLM models.
 
-> You are an expert code reviewer. Review the provided code changes and give clear, actionable feedback.
+## Outputs
 
-You can override it to focus on specific concerns, enforce coding standards, or adjust the review tone, e.g.:
+| Output | Description |
+| --- | --- |
+| `comment-id` | GitHub ID for the review comment. |
+| `reviewed-file-count` | Number of files with a patch sent to Z.ai. |
+| `omitted-file-count` | Number of files with no GitHub patch, a truncated patch, or an excluded patch. |
 
-> You are a security-focused code reviewer. Identify vulnerabilities, unsafe patterns, and authentication issues. Skip style comments.
+## Review limits
 
-## Configuration
+GitHub does not supply a patch for all files. Binary files and very large files can have no patch. The action reports those files in its review comment.
 
-To use this action, you must add your Z.ai API key as a GitHub secret.
+The default diff limit prevents a large pull request from exceeding the model input limit. The action truncates one patch when needed. It then skips later patches. The review comment states when this happens.
 
-### 1️⃣ Get your Z.ai API key
+The action retries rate-limit and server errors twice. It limits a response to 1 MiB. It also limits the GitHub comment to 60,000 characters.
 
-Generate an API key from your Z.ai dashboard.
+## Security
 
-### 2️⃣ Add the API key to your repository
+Use `pull_request`, as shown above. Do not change the workflow to `pull_request_target`. That event can expose `ZAI_API_KEY` to untrusted pull request code.
 
-1. Go to your GitHub repository  
-2. Click **Settings**  
-3. Navigate to **Secrets and variables → Actions**  
-4. Click **New repository secret** and add:
+GitHub does not provide repository secrets to workflows that external contributors trigger. Review those pull requests only after their changes are in a trusted branch or through a separate approved review process.
 
-   - **Name:** `ZAI_API_KEY` — **Value:** your Z.ai API key
+## Development
 
-## Advanced configuration
+Node.js 24 is the action runtime.
 
-Instead of using default values for `ZAI_MODEL`, `ZAI_SYSTEM_PROMPT`, and `ZAI_REVIEWER_NAME`, you can override them, and manage them as GitHub Actions variables. This lets you update the model, review prompt, or reviewer name without touching the workflow file.
-
-### 1️⃣ Add the variables to your repository
-
-1. Go to your GitHub repository
-2. Click **Settings**
-3. Navigate to **Secrets and variables → Actions**
-4. Click the **Variables** tab
-5. Click **New repository variable** and add:
-
-   - **Name:** `ZAI_MODEL` — **Value:** e.g. `glm-5.3`
-   - **Name:** `ZAI_SYSTEM_PROMPT` — **Value:** your custom system prompt
-   - **Name:** `ZAI_REVIEWER_NAME` — **Value:** e.g. `AI Code Review`
-
-### 2️⃣ Reference them in your workflow
-
-```yaml
-      - name: Code Review
-        uses: tarmojussila/zai-code-review@v0.4.0
-        with:
-          ZAI_API_KEY: ${{ secrets.ZAI_API_KEY }}
-          ZAI_MODEL: ${{ vars.ZAI_MODEL }}
-          ZAI_SYSTEM_PROMPT: ${{ vars.ZAI_SYSTEM_PROMPT }}
-          ZAI_REVIEWER_NAME: ${{ vars.ZAI_REVIEWER_NAME }}
+```bash
+npm install
+npm test
+npm run build
 ```
 
-## Contributing
-
-Contributions are welcome. See the [CONTRIBUTING](CONTRIBUTING.md) file for more information.
+Commit changes to `src/`, `dist/`, and `dist/licenses.txt` when the bundle changes. See [CONTRIBUTING](CONTRIBUTING.md) for the pull request process.
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for more information.
+This project uses the [MIT License](LICENSE).
