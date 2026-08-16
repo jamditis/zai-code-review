@@ -7,7 +7,7 @@ inputs:
   ZAI_MODEL:
     description: "Z.ai AI model"
     required: false
-    default: "glm-4.7"
+    default: "glm-5.3"
   ZAI_SYSTEM_PROMPT:
     description: "Custom system prompt for the AI reviewer"
     required: false

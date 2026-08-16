@@ -39,7 +39,7 @@ jobs:
 | Input | Required | Default | Description |
 |---|---|---|---|
 | `ZAI_API_KEY` | Yes | — | Your Z.ai API key |
-| `ZAI_MODEL` | No | `glm-4.7` | Z.ai model to use for review |
+| `ZAI_MODEL` | No | `glm-5.3` | Z.ai coding-plan model (`glm-5.3`, `glm-5-turbo`, or `glm-4.7`) |
 | `ZAI_SYSTEM_PROMPT` | No | See below | Custom system prompt for the AI reviewer |
 | `ZAI_REVIEWER_NAME` | No | `Z.ai Code Review` | Name shown in the review comment header |
 | `EXCLUDE_PATTERNS` | No | `*.lock,package-lock.json,yarn.lock,pnpm-lock.yaml` | Comma-separated file patterns to exclude from review |
@@ -82,7 +82,7 @@ Instead of using default values for `ZAI_MODEL`, `ZAI_SYSTEM_PROMPT`, and `ZAI_R
 4. Click the **Variables** tab
 5. Click **New repository variable** and add:
 
-   - **Name:** `ZAI_MODEL` — **Value:** e.g. `glm-4.7`
+   - **Name:** `ZAI_MODEL` — **Value:** e.g. `glm-5.3`
    - **Name:** `ZAI_SYSTEM_PROMPT` — **Value:** your custom system prompt
    - **Name:** `ZAI_REVIEWER_NAME` — **Value:** e.g. `AI Code Review`
 
